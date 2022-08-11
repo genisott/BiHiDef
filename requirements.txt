@@ -1,0 +1,9 @@
+numpy
+pandas
+python-igraph
+netZooPy
+networkx
+copy
+scipy
+multiprocessing
+hidef
