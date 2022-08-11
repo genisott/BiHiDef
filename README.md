@@ -1,4 +1,4 @@
-# BiHiDef
+# BiHiDef (COMPLETE README TO-DO)
 Bipartite adaptation of HiDeF using BRIM
 
 ## Install instructions
