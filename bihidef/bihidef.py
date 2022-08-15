@@ -214,6 +214,9 @@ def bihidef(filename,
     consensusR = consensus(cluR,k=k,p=p)
     consensusT = consensus(cluT,k=k,p=p)
     
+    gn = {k[4:]:gn[k] for k in gn.keys()}
+    rg = {k[4:]:rg[k] for k in rg.keys()}
+    
     weave_and_out(consensusT,consensusR,gn,rg,oR,oT,A)   
 
 
