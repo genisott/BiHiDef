@@ -20,7 +20,10 @@ from hidef import weaver
 
 
 def create_resolution_graph(minres=0.001,maxres=10,density=0.1,neighbors=10,min_diff_resolution = 0.001):
-    
+    '''
+    Creates two resolution graphs. One to attach to each nodeset in the bipartite graph.
+    '''
+
     resolution_graph = nx.Graph()
 
     stack_res_range = []
@@ -57,6 +60,9 @@ def create_resolution_graph(minres=0.001,maxres=10,density=0.1,neighbors=10,min_
 
 
 def run_alg(condor_object,resolution):
+    
+
+
     condor_object.initial_community(resolution=resolution)
     condor_object.brim(resolution=resolution)
     clT = sorted(condor_object.tar_memb["community"].unique())
@@ -195,28 +201,33 @@ def co_cluster_k(wv1,wv2,k,matrix):
 
 
 
-def bihidef(filename,
-            jaccard=0.75,
-            minres=0.001,
-            maxres=10,
-            density=0.1,
-            processes=10,
-            neighbors=10,
-            min_diff_resolution=0.001,
-            k=2,p=50,
-            oR="pvr",oT="pvg"):
+def bihidef(filename, #Edgelist with comma separated names. No header. Possible third column with weights.
+            jaccard=0.75, #Jaccard score threshold.
+            minres=0.001, #Minimmum resolution (supposedly just one big community).
+            maxres=10, #Maximum resolution (lots of smaller communities).
+            density=0.1, #Density threshold to consider two resolutions proximal.
+            processes=10, #Number of threads for the multiprocessing.
+            neighbors=10, #Number of close resolutions in the resolution graph.
+            min_diff_resolution=0.001, 
+            k=2,p=50, #Parameters in the condensation step. (check hidef package).
+            oR="pvr",oT="pvg"): #Output prefixes.
     
+    # Create resolution graphs and resolution range.
     resolution_graph,resolution_graphR,all_resolutions = create_resolution_graph(minres=minres,maxres=maxres,density=density,neighbors=neighbors,min_diff_resolution = min_diff_resolution)
     print("Computing community structure for "+str(len(all_resolutions))+" resolution points")
     
+    # Create the cluster objects. Run condor on each resolution.
     cluT,cluR,gn,rg,A,B = run(filename=filename,jaccard=jaccard,resolution_graph=resolution_graph,resolution_graphR=resolution_graphR,all_resolutions=all_resolutions,processes=processes)
     
+    # Run the persistence of community across resolution step.
     consensusR = consensus(cluR,k=k,p=p)
     consensusT = consensus(cluT,k=k,p=p)
     
+    # Recover the original names of the nodes. (remove tar_,reg_ added by condor)
     gn = {k[4:]:gn[k] for k in gn.keys()}
     rg = {k[4:]:rg[k] for k in rg.keys()}
     
+    # Weaver (build the hierarchy) and output the community structure.
     weave_and_out(consensusT,consensusR,gn,rg,oR,oT,A)   
 
 
