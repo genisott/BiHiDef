@@ -2,10 +2,6 @@ import numpy as np
 import networkx as nx
 from netZooPy import condor
 import pandas as pd
-import networkx as nx
-import igraph as ig
-import os
-import pickle
 import copy
 from scipy.sparse import *
 import scipy as sp
