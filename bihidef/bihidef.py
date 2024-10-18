@@ -84,7 +84,7 @@ def create_resolution_graph(minres=0.001, maxres=10, density=0.1, neighbors=10, 
 def run_alg(condor_object, resolution):
     """
     Executes the community detection algorithm on the provided condor_object using a specified resolution. 
-    It initializes communities and calculates membership matrices for target and regular members.
+    It initializes communities and calculates membership matrices for target and regulator members.
 
     Parameters:
     - condor_object: An object containing the data and methods required for community detection.
@@ -92,7 +92,7 @@ def run_alg(condor_object, resolution):
 
     Returns:
     - T (scipy.sparse.csr_matrix): A sparse matrix indicating membership of target nodes in detected communities.
-    - R (scipy.sparse.csr_matrix): A sparse matrix indicating membership of regular nodes in detected communities.
+    - R (scipy.sparse.csr_matrix): A sparse matrix indicating membership of regulator nodes in detected communities.
     """
 
     # Initialize the community detection process for the specified resolution
@@ -101,14 +101,14 @@ def run_alg(condor_object, resolution):
     # Apply the BRIM algorithm on the condor_object for the specified resolution
     condor_object.brim(resolution=resolution)
 
-    # Extract unique community identifiers for target and regular members and sort them
+    # Extract unique community identifiers for target and regulator members and sort them
     clT = sorted(condor_object.tar_memb["community"].unique())
     clR = sorted(condor_object.reg_memb["community"].unique())
 
     # Create a sparse matrix for target communities (T), where each column represents a community
     T = sp.sparse.coo_matrix(np.matrix([np.array(condor_object.tar_memb["community"] == i).astype(int) for i in clT])).tocsr()
 
-    # Create a sparse matrix for regular communities (R), where each column represents a community
+    # Create a sparse matrix for regulator communities (R), where each column represents a community
     R = sp.sparse.coo_matrix(np.matrix([np.array(condor_object.reg_memb["community"] == i).astype(int) for i in clR])).tocsr()
 
     # Print the resolution used, number of unique communities found, and the modularity of the condor_object
