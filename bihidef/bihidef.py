@@ -160,6 +160,7 @@ def run(filename, jaccard, resolution_graph, resolution_graphR, all_resolutions,
     maxc = max(max(condor_object.tar_memb["community"]), max(condor_object.reg_memb["community"]))
 
     # Generate matrices for community detection; B is for bipartite graph, A is for adjacency
+    # i have no idea why + 6
     B, _, _, _, gn, rg = condor_object.matrices(maxc + 6, 1)
     A, _, _, _, _, _ = condor_object.matrices(maxc + 6, 0)
 
