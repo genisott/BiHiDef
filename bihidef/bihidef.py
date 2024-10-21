@@ -114,7 +114,7 @@ def run_alg(condor_object, resolution):
     # Print the resolution used, number of unique communities found, and the modularity of the condor_object
     print("Resolution: " + str(resolution) + " NComs: " + str(len(condor_object.tar_memb["community"].unique())) + " Modularity: " + str(condor_object.modularity))
 
-    # Return the sparse matrices for target and regular communities
+    # Return the sparse matrices for target and regulator communities
     return T, R
 
 
@@ -128,15 +128,15 @@ def run(filename, jaccard, resolution_graph, resolution_graphR, all_resolutions,
     - filename (str): The path to the CSV file containing network data.
     - jaccard (float): The Jaccard similarity threshold used for cluster graph creation.
     - resolution_graph (networkx.Graph): The graph to store resolution-based information for target communities.
-    - resolution_graphR (networkx.Graph): The graph to store resolution-based information for regular communities.
+    - resolution_graphR (networkx.Graph): The graph to store resolution-based information for regulator communities.
     - all_resolutions (list of float): A list of resolution values to be used in community detection.
     - processes (int): The number of parallel processes to use for running the algorithm (default is 10).
     
     Returns:
     - cluT (ClusterGraph): A graph representing clusters based on target communities.
-    - cluR (ClusterGraph): A graph representing clusters based on regular communities.
+    - cluR (ClusterGraph): A graph representing clusters based on regulator communities.
     - gn (array-like): Data related to target nodes.
-    - rg (array-like): Data related to regular nodes.
+    - rg (array-like): Data related to regulator nodes.
     - A (scipy.sparse.csr_matrix): The adjacency matrix for the network.
     - B (scipy.sparse.csr_matrix): The bipartite graph matrix for the network.
     """
@@ -156,7 +156,7 @@ def run(filename, jaccard, resolution_graph, resolution_graphR, all_resolutions,
     # Apply the BRIM algorithm to detect communities using the minimum resolution
     condor_object.brim(resolution=minres)
 
-    # Determine the maximum community identifier for target and regular memberships
+    # Determine the maximum community identifier for target and regulator memberships
     maxc = max(max(condor_object.tar_memb["community"]), max(condor_object.reg_memb["community"]))
 
     # Generate matrices for community detection; B is for bipartite graph, A is for adjacency
@@ -164,15 +164,15 @@ def run(filename, jaccard, resolution_graph, resolution_graphR, all_resolutions,
     B, _, _, _, gn, rg = condor_object.matrices(maxc + 6, 1)
     A, _, _, _, _, _ = condor_object.matrices(maxc + 6, 0)
 
-    # Extract unique community identifiers for target and regular members and sort them
+    # Extract unique community identifiers for target and regulator members and sort them
     clT = sorted(condor_object.tar_memb["community"].unique())
     clR = sorted(condor_object.reg_memb["community"].unique())
 
-    # Create sparse matrices representing the membership of target and regular communities
+    # Create sparse matrices representing the membership of target and regulator communities
     T = sp.sparse.coo_matrix(np.matrix([np.array(condor_object.tar_memb["community"] == clT[i]).astype(int) for i in clT])).tocsr()
     R = sp.sparse.coo_matrix(np.matrix([np.array(condor_object.reg_memb["community"] == clR[i]).astype(int) for i in clR])).tocsr()
 
-    # Initialize ClusterGraph objects for target and regular communities
+    # Initialize ClusterGraph objects for target and regulator communities
     cluT = ClusterGraph()
     cluR = ClusterGraph()
 
@@ -212,23 +212,23 @@ def run(filename, jaccard, resolution_graph, resolution_graphR, all_resolutions,
 def weave_and_out(T, R, gn, rg, oR, oT, A):
     """
     Performs weaving operations on the given community matrices T and R, and outputs the co-clustering results 
-    for both target and regular communities.
+    for both target and regulator communities.
     
     Parameters:
     - T (list of tuples): List of tuples representing the target community structure, 
                           where each tuple contains the cluster representation and its length.
-    - R (list of tuples): List of tuples representing the regular community structure, 
+    - R (list of tuples): List of tuples representing the regulator community structure, 
                           where each tuple contains the cluster representation and its length.
     - gn (dict): A dictionary mapping node identifiers to target node properties.
-    - rg (dict): A dictionary mapping node identifiers to regular node properties.
-    - oR (str): Output file name suffix for regular clusters.
+    - rg (dict): A dictionary mapping node identifiers to regulator node properties.
+    - oR (str): Output file name suffix for regulator clusters.
     - oT (str): Output file name suffix for target clusters.
     - A (scipy.sparse.csr_matrix): The adjacency matrix of the network.
     
-    This function writes the co-clustered information to text files for both target and regular clusters.
+    This function writes the co-clustered information to text files for both target and regulator clusters.
     """
 
-    # Extract collapsed cluster representations and lengths for regular communities
+    # Extract collapsed cluster representations and lengths for regulator communities
     cluR_collapsed = [x[0] for x in R]  # Get the first element (clusters) from R
     len_componentR = [x[1] for x in R]  # Get the second element (lengths) from R
     cluR_collapsed.insert(0, np.ones(len(cluR_collapsed[0]), ))  # Insert a vector of ones at the start
@@ -241,7 +241,7 @@ def weave_and_out(T, R, gn, rg, oR, oT, A):
     len_componentT.insert(0, 0)  # Insert a zero length at the start
     
     # Initialize Weaver objects for weaving operations
-    wvR = weaver.Weaver()  # Weaver for regular communities
+    wvR = weaver.Weaver()  # Weaver for regulator communities
     wvT = weaver.Weaver()  # Weaver for target communities
     
     # Weave the target communities using the specified parameters
@@ -249,12 +249,12 @@ def weave_and_out(T, R, gn, rg, oR, oT, A):
     # Output results for the target weaving operation
     output_all(wvT, list(gn.keys()), oT, persistence=len_componentT)
 
-    # Weave the regular communities using the specified parameters
+    # Weave the regulator communities using the specified parameters
     R = wvR.weave(cluR_collapsed, terminals=list(rg.keys()), boolean=True, levels=False, merge=True, cutoff=0.75)
-    # Output results for the regular weaving operation
+    # Output results for the regulator weaving operation
     output_all(wvR, list(rg.keys()), oR, persistence=len_componentR)
 
-    # Open files for writing the co-clustered results for regular and target clusters
+    # Open files for writing the co-clustered results for regulator and target clusters
     fileR = open("cocluster_" + oR + "_Reg.txt", "w")
     fileT = open("cocluster_" + oT + "_Tar.txt", "w")
 
@@ -268,7 +268,7 @@ def weave_and_out(T, R, gn, rg, oR, oT, A):
         if (ccR, ccT) == (0, 0):  # Break the loop if no further clusters are found
             break
 
-        # Write co-clustering results for regular clusters to fileR
+        # Write co-clustering results for regulator clusters to fileR
         fileR.writelines(["Cluster" + str(k) + "-" + str(i) + "\t" + "Cluster" + str(k) + "-" + str(ccR[i]) + "\t" + str(k) + "\n" 
                           for i in range(0, len(ccR))])
 
@@ -436,7 +436,7 @@ def bihidef(
         A parameter related to the condensation step (check the hidef package for details). Default is 50.
 
     oR : str, optional
-        Output prefix for the regular graph results. Default is "pvr".
+        Output prefix for the regulator graph results. Default is "pvr".
 
     oT : str, optional
         Output prefix for the target graph results. Default is "pvg".
