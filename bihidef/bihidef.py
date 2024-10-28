@@ -1,22 +1,14 @@
-import numpy as np
-import networkx as nx
-from netZooPy import condor
-import pandas as pd
-import networkx as nx
-import igraph as ig
-import os
-import pickle
 import copy
-from scipy.sparse import *
-import scipy as sp
 import multiprocessing as mp
 
-
-from hidef.hidef_finder import ClusterGraph,update_resolution_graph
-from hidef.hidef_finder import collapse_cluster_graph,consensus
-from hidef.hidef_finder import output_all
-from hidef.utils import jaccard_matrix
+import networkx as nx
+import numpy as np
+import pandas as pd
+import scipy as sp
 from hidef import weaver
+from hidef.hidef_finder import ClusterGraph, consensus, output_all, update_resolution_graph
+from netZooPy import condor
+from scipy.sparse import *
 
 
 def create_resolution_graph(minres=0.001,maxres=10,density=0.1,neighbors=10,min_diff_resolution = 0.001):
@@ -27,7 +19,7 @@ def create_resolution_graph(minres=0.001,maxres=10,density=0.1,neighbors=10,min_
     resolution_graph = nx.Graph()
 
     stack_res_range = []
-    stack_res_range.append((minres, maxres))   
+    stack_res_range.append((minres, maxres))
 
     _ = update_resolution_graph(resolution_graph, minres, density, neighbors)
     _ = update_resolution_graph(resolution_graph, maxres, density, neighbors)
@@ -36,7 +28,7 @@ def create_resolution_graph(minres=0.001,maxres=10,density=0.1,neighbors=10,min_
 
     while stack_res_range:
             current_range = stack_res_range.pop(0)
-            resname1, resname2 = '{:.4f}'.format(current_range[0]), '{:.4f}'.format(current_range[1])
+            resname1, resname2 = f'{current_range[0]:.4f}', f'{current_range[1]:.4f}'
             # LOGGER.debug('Current resolution range:{} {}'.format(resname1, resname2))
 
             if round(current_range[1] - current_range[0], 4) <= min_diff_resolution:
@@ -55,12 +47,12 @@ def create_resolution_graph(minres=0.001,maxres=10,density=0.1,neighbors=10,min_
 
             _ = update_resolution_graph(resolution_graph, new_resolution, density, neighbors)
     resolution_graphR = copy.deepcopy(resolution_graph)
-    
+
     return resolution_graph,resolution_graphR,all_resolutions
 
 
 def run_alg(condor_object,resolution):
-    
+
 
 
     condor_object.initial_community(resolution=resolution)
@@ -80,7 +72,7 @@ def run(filename,jaccard,resolution_graph,resolution_graphR,all_resolutions,proc
     # This is done only once.
     network = pd.read_csv(filename,header=None)
     condor_object = condor.condor_object(dataframe=network,silent=True)
-    
+
     condor_object.initial_community(resolution=minres)
     condor_object.brim(resolution=minres)
     maxc = max(max(condor_object.tar_memb["community"]),max(condor_object.reg_memb["community"]))
@@ -110,37 +102,37 @@ def run(filename,jaccard,resolution_graph,resolution_graphR,all_resolutions,proc
     results = [[sp.sparse.coo_matrix(T).tocsr(),sp.sparse.coo_matrix(R).tocsr()]]+results
 
     for i in range(len(all_resolutions)):
-            nodename = '{:.4f}'.format(all_resolutions[i])
+            nodename = f'{all_resolutions[i]:.4f}'
             resolution_graph.nodes[nodename]['matrix'] = results[i][0]
             resolution_graphR.nodes[nodename]['matrix'] = results[i][1]
             cluT.add_clusters(resolution_graph, all_resolutions[i])
             cluR.add_clusters(resolution_graphR, all_resolutions[i])
-    
+
     return cluT,cluR,gn,rg,A,B
 
 
 def weave_and_out(T,R,gn,rg,oR,oT,A):
-    
+
     cluR_collapsed = [x[0] for x in R]
     len_componentR = [x[1] for x in R]
-    cluR_collapsed.insert(0, np.ones(len(cluR_collapsed[0]), ))
+    cluR_collapsed.insert(0, np.ones(len(cluR_collapsed[0]) ))
     len_componentR.insert(0, 0)
 
     cluT_collapsed = [x[0] for x in T]
     len_componentT = [x[1] for x in T]
-    cluT_collapsed.insert(0, np.ones(len(cluT_collapsed[0]), ))
+    cluT_collapsed.insert(0, np.ones(len(cluT_collapsed[0]) ))
     len_componentT.insert(0, 0)
-    
+
     wvR = weaver.Weaver()
     wvT = weaver.Weaver()
-    
+
     T = wvT.weave(cluT_collapsed, terminals=list(gn.keys()), boolean=True, levels=False, merge=True, cutoff=0.75)
     output_all(wvT, list(gn.keys()), oT, persistence=len_componentT)
-    
+
     R = wvR.weave(cluR_collapsed, terminals=list(rg.keys()), boolean=True, levels=False, merge=True, cutoff=0.75)
     output_all(wvR, list(rg.keys()), oR, persistence=len_componentR)
-    
-    
+
+
     fileR = open("cocluster_"+oR+"_Reg.txt","w")
     fileT = open("cocluster_"+oT+"_Tar.txt","w")
 
@@ -151,23 +143,23 @@ def weave_and_out(T,R,gn,rg,oR,oT,A):
         ccR,ccT = co_cluster_k(wvR,wvT,k,A)
         if (ccR,ccT) == (0,0): break
 
-        fileR.writelines(["Cluster"+str(k)+"-"+str(i)+"\t"+"Cluster"+str(k)+"-"+str(ccR[i])+"\t"+str(k)+"\n" for i in range(0,len(ccR))])
+        fileR.writelines(["Cluster"+str(k)+"-"+str(i)+"\t"+"Cluster"+str(k)+"-"+str(ccR[i])+"\t"+str(k)+"\n" for i in range(len(ccR))])
 
 
-        fileT.writelines(["Cluster"+str(k)+"-"+str(i)+"\t"+"Cluster"+str(k)+"-"+str(ccT[i])+"\t"+str(k)+"\n" for i in range(0,len(ccT))])
+        fileT.writelines(["Cluster"+str(k)+"-"+str(i)+"\t"+"Cluster"+str(k)+"-"+str(ccT[i])+"\t"+str(k)+"\n" for i in range(len(ccT))])
 
     fileR.close()
     fileT.close()
 
 
 
-def wv_clust(wv): 
+def wv_clust(wv):
     wv_clusts = []
     for v, vdata in wv.hier.nodes(data=True):
         if not isinstance(v, tuple): #Skip the leaves.
             continue
         ind = vdata['index']
-        name = 'Cluster{}-{}'.format(str(v[0]), str(v[1]))
+        name = f'Cluster{v[0]!s}-{v[1]!s}'
         if isinstance(ind, int):
             wv_clusts.append([name, wv._assignment[ind]])
         else:
@@ -176,7 +168,7 @@ def wv_clust(wv):
     return wv_clusts
 
 def level_k_coms(wv_clusts,k):
-    return [wv_clusts[i][1] for i in range(0,len(wv_clusts)) if int(wv_clusts[i][0][7])==k]
+    return [wv_clusts[i][1] for i in range(len(wv_clusts)) if int(wv_clusts[i][0][7])==k]
 
 
 
@@ -184,17 +176,17 @@ def level_k_coms(wv_clusts,k):
 def co_cluster_k(wv1,wv2,k,matrix):
     cl1 = level_k_coms(wv_clust(wv1),k)
     cl2 = level_k_coms(wv_clust(wv2),k)
-    
+
     if cl1 == [] or cl2 == []: return (0,0)
-    
+
     cc1 = list()
-    for i in range(0,len(cl1)):
-        shw_i = [matrix[:,cl1[i]].transpose()[:,cl2[j]].sum() for j in range(0,len(cl2))]
+    for i in range(len(cl1)):
+        shw_i = [matrix[:,cl1[i]].transpose()[:,cl2[j]].sum() for j in range(len(cl2))]
         cc1.append(shw_i.index(max(shw_i)))
-        
+
     cc2 = list()
-    for i in range(0,len(cl2)):
-        shw_i = [matrix[:,cl1[j]].transpose()[:,cl2[i]].sum() for j in range(0,len(cl1))]
+    for i in range(len(cl2)):
+        shw_i = [matrix[:,cl1[j]].transpose()[:,cl2[i]].sum() for j in range(len(cl1))]
         cc2.append(shw_i.index(max(shw_i)))
     return cc1,cc2
 
@@ -208,27 +200,27 @@ def bihidef(filename, #Edgelist with comma separated names. No header. Possible 
             density=0.1, #Density threshold to consider two resolutions proximal.
             processes=10, #Number of threads for the multiprocessing.
             neighbors=10, #Number of close resolutions in the resolution graph.
-            min_diff_resolution=0.001, 
+            min_diff_resolution=0.001,
             k=2,p=50, #Parameters in the condensation step. (check hidef package).
             oR="pvr",oT="pvg"): #Output prefixes.
-    
+
     # Create resolution graphs and resolution range.
     resolution_graph,resolution_graphR,all_resolutions = create_resolution_graph(minres=minres,maxres=maxres,density=density,neighbors=neighbors,min_diff_resolution = min_diff_resolution)
     print("Computing community structure for "+str(len(all_resolutions))+" resolution points")
-    
+
     # Create the cluster objects. Run condor on each resolution.
     cluT,cluR,gn,rg,A,B = run(filename=filename,jaccard=jaccard,resolution_graph=resolution_graph,resolution_graphR=resolution_graphR,all_resolutions=all_resolutions,processes=processes)
-    
+
     # Run the persistence of community across resolution step.
     consensusR = consensus(cluR,k=k,p=p)
     consensusT = consensus(cluT,k=k,p=p)
-    
+
     # Recover the original names of the nodes. (remove tar_,reg_ added by condor)
     gn = {k[4:]:gn[k] for k in gn.keys()}
     rg = {k[4:]:rg[k] for k in rg.keys()}
-    
+
     # Weaver (build the hierarchy) and output the community structure.
-    weave_and_out(consensusT,consensusR,gn,rg,oR,oT,A)   
+    weave_and_out(consensusT,consensusR,gn,rg,oR,oT,A)
 
 
 
