@@ -1,0 +1,33 @@
+[project]
+name = "BiHiDef"
+description = "Bipartite adaptation of HiDef using BRIM"
+authors = [{name="Genís Calderer", email="genis.calderer@gmail.com"}]
+requires-python = ">=3.12"
+dynamic = ["version"]
+
+
+dependencies = ["numpy",
+"pandas",
+"python-igraph",
+"netZooPy",
+"networkx",
+"scipy",
+"hidef",
+]
+
+[tool.uv]
+dev-dependencies = [
+  "ruff",
+  "coverage",
+  "mock",
+  "pytest>=6",
+  "pytest-cov",
+  "pytest-integration",
+  "pytest-randomly",
+  "pre-commit",
+]
+
+[tool.ruff]
+line-length = 120
+# Update this to match the lowest supported Python version.
+target-version = 'py312'
